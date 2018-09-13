@@ -3,17 +3,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:65796e5fdb94d94bc0ee6bc422aa3541dbe69ed4da275cb5a27f8fa141f4e35c"
   name = "github.com/GeertJohan/go.rice"
   packages = [
     ".",
-    "embedded",
+    "embedded"
   ]
-  pruneopts = "UT"
   revision = "c02ca9a983da5807ddf7d796784928f5be4afd09"
 
 [[projects]]
-  digest = "1:9ede7940cd19ac5d92896381abac71954feb57608b617152e48112c3dc667e87"
   name = "github.com/asdine/storm"
   packages = [
     ".",
@@ -21,51 +18,38 @@
     "codec/json",
     "index",
     "internal",
-    "q",
+    "q"
   ]
-  pruneopts = "UT"
   revision = "bda68dab90fc908ee5dbccb36400edf4f54972d6"
   version = "v2.1.1"
 
 [[projects]]
-  digest = "1:c28625428387b63dd7154eb857f51e700465cfbf7c06f619e71f2da33cefe47e"
   name = "github.com/coreos/bbolt"
   packages = ["."]
-  pruneopts = "UT"
   revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
   version = "v1.3.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:5fd5c4d4282935b7a575299494f2c09e9d2cacded7815c83aff7c1602aff3154"
   name = "github.com/daaku/go.zipexe"
   packages = ["."]
-  pruneopts = "UT"
   revision = "a5fe2436ffcb3236e175e5149162b41cd28bd27d"
 
 [[projects]]
   branch = "master"
-  digest = "1:caf6db28595425c0e0f2301a00257d11712f65c1878e12cffc42f6b9a9cf3f23"
   name = "github.com/kardianos/osext"
   packages = ["."]
-  pruneopts = "UT"
   revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
 
 [[projects]]
   branch = "master"
-  digest = "1:4b487c782bc804d994e91adbd3d2a8a77a482671efd87b2fde0805adb01a39c0"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  pruneopts = "UT"
   revision = "d99a578cf41bfccdeaf48b0845c823a4b8b0ad5e"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "github.com/GeertJohan/go.rice",
-    "github.com/GeertJohan/go.rice/embedded",
-    "github.com/asdine/storm",
-  ]
+  inputs-digest = "aee683ede35fc1c2f565a00b684642753b58fbe90775cee75ddebcc4092973cc"
   solver-name = "gps-cdcl"
   solver-version = 1

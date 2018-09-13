@@ -114,8 +114,6 @@ class DashboardItem extends React.Component {
                 imageUrl = "/files/"+this.props.board.project+"/.logo.png"
         }
 
-        console.log(imageUrl)
-
         return (
             <div style={cellStyle} onClick={this.handleClick}>
                 <div style={cellContent}>
@@ -126,13 +124,5 @@ class DashboardItem extends React.Component {
         )
     }
 }
-
-// project
-// parent
-// imageOverrideUrl
-// name
-// baseUrl
-// port
-// path
 
 export default Dashboard

@@ -8,7 +8,9 @@ go get -u github.com/golang/dep/cmd/dep
 
 cd src/gompose
 ../../dep ensure
-../../rice embed-go
+cd webserver
+../../../rice embed-go
+cd ..
 go build
 mv gompose ../../
 cd ../..
