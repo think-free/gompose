@@ -1,4 +1,4 @@
-![Gompose Logo](/assets/gompose-full.png)
+![Gompose Logo](/assets/gompose-full.png =885x300)
 
 Gompose is a docker-compose manager written in Go and next.js
 
