@@ -156,6 +156,11 @@ class ProjectDetail extends React.Component {
         .then(data => this.setState({ detail: data }))
     }
 
+    pullClick(e) {
+        console.log("Pull project " + this.props.parent + " / " + this.props.project)
+        fetch("/project/pull?parent=" + this.props.parent + "&name=" + this.props.project)
+    }
+
     startClick(e) {
         console.log("Start project " + this.props.parent + " / " + this.props.project)
         fetch("/project/start?parent=" + this.props.parent + "&name=" + this.props.project)
@@ -184,6 +189,7 @@ class ProjectDetail extends React.Component {
                     <Container style={action_container}>
                         <img src="static/assets/action.png" /><span style={containerTitle}>state</span>&nbsp;&nbsp;&nbsp;{detail.status}
                         <span style={floatRightArea}>
+                            <div style={button} onClick={this.updateClick}>Pull</div>
                             <div style={button} onClick={this.stopClick}>Stop</div>
                             <div style={button} onClick={this.startClick}>Start</div>
                         </span>
@@ -300,8 +306,14 @@ class ProjectContainerDetail extends React.Component {
     constructor(props) {
         super(props);
 
-        this.stopClick=this.stopClick.bind(this);
+        this.logClick=this.logClick.bind(this);
         this.startClick=this.startClick.bind(this);
+        this.stopClick=this.stopClick.bind(this);
+    }
+
+    logClick(e) {
+        console.log("Show logs " + this.props.parent + " " + this.props.project + " container : " + this.props.container.compose);
+        this.props.dispatch(setValue("logs", this.props.container.compose));
     }
 
     startClick(e) {
@@ -317,7 +329,7 @@ class ProjectContainerDetail extends React.Component {
     render() {
         return  (
 
-            <div style={{...subcontainer,...containerDetail}}><div style={orange}>{this.props.container.compose}<span style={floatRightArea}> <div style={button} onClick={this.stopClick}>Stop</div> <div style={button} onClick={this.startClick}>Start</div></span></div><br />
+            <div style={{...subcontainer,...containerDetail}}><div style={orange}>{this.props.container.compose}<span style={floatRightArea}> <div style={button} onClick={this.logClick}>Log</div> <div style={button} onClick={this.stopClick}>Stop</div> <div style={button} onClick={this.startClick}>Start</div></span></div><br />
                 <table>
                     <tr>
                         <td>State</td>
@@ -366,5 +378,7 @@ class ProjectContainerDetail extends React.Component {
         )
     }
 }
+
+ProjectContainerDetail = connect()(ProjectContainerDetail)
 
 export default connect()(ProjectDetail)

@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 
 import ToolBar from '../projecttoolbar.js'
 import Detail from './projectdetail.js'
+import Logs from './logs.js'
 import { setValue } from '../../components/store.js'
 
 /* Projects */
@@ -19,7 +20,8 @@ const layoutStyle = {
 const mapStateToProps = (state) => {
     return {
         projectParent: state.projectParent,
-        projectDetail: state.projectDetail
+        projectDetail: state.projectDetail,
+        logs: state.logs
     }
 }
 
@@ -45,6 +47,7 @@ class Projects extends React.Component {
         this.props.projectDetail = "none";
         this.props.dispatch(setValue("projectParent", "none"));
         this.props.dispatch(setValue("projectDetail", "none"));
+        this.props.dispatch(setValue("logs", "none"));
 
         // Getting first boards
         this.getData();
@@ -96,6 +99,14 @@ class Projects extends React.Component {
                     })}
                 </div>
             )
+        } else if (this.props.logs != undefined && this.props.logs != "none"){
+
+            return (
+                <div style={layoutStyle}>
+                    <Logs parent={this.props.projectParent} project={this.props.projectDetail} container={this.props.logs}/>
+                </div>
+            )
+
         } else {
 
             return (

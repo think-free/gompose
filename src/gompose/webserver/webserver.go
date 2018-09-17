@@ -19,7 +19,7 @@ type WebServer struct {
 }
 
 // New create the webserver
-func New(db *storm.DB, path string, gitIntegration bool) *WebServer {
+func New(db *storm.DB, path string, gitIntegration bool, dev bool) *WebServer {
 
 	s := &WebServer{
 		db:             db,
@@ -28,8 +28,13 @@ func New(db *storm.DB, path string, gitIntegration bool) *WebServer {
 	}
 
 	// Server the web app and the files in the docker compose tree
-	box := rice.MustFindBox("../gui/out/")
-	http.Handle("/", http.FileServer(box.HTTPBox()))
+	if dev {
+		http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./src/gompose/gui/out/"))))
+
+	} else {
+		box := rice.MustFindBox("../gui/out/")
+		http.Handle("/", http.FileServer(box.HTTPBox()))
+	}
 	http.Handle("/files/", http.StripPrefix("/files", http.FileServer(http.Dir(s.path))))
 
 	// Api requests
@@ -39,8 +44,11 @@ func New(db *storm.DB, path string, gitIntegration bool) *WebServer {
 
 	http.HandleFunc("/projects", s.projects)
 
+	http.HandleFunc("/logs", s.logs)
+
 	http.HandleFunc("/project/get", s.projectGet)
 	http.HandleFunc("/project/update", s.projectUpdate)
+	http.HandleFunc("/project/pull", s.projectPull)
 	http.HandleFunc("/project/start", s.projectStart)
 	http.HandleFunc("/project/stop/", s.projectStop)
 	http.HandleFunc("/project/container/start", s.projectContainerStart)
@@ -139,6 +147,32 @@ func (s *WebServer) projects(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
+func (s *WebServer) logs(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	containerar, ok := r.URL.Query()["container"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	container := strings.Join(containerar, " ")
+
+	var out string
+
+	if container != "none" {
+		out = s.run(projectPath, "docker-compose", "logs", "--no-color", "--tail", "1000", container)
+	} else {
+		out = s.run(projectPath, "docker-compose", "logs", "--no-color", "--tail", "1000")
+	}
+
+	w.Write([]byte(out))
+}
+
 func (s *WebServer) projectGet(w http.ResponseWriter, r *http.Request) {
 
 	parent, name, err := s.getParentAndNameFromRequest(r)
@@ -160,6 +194,20 @@ func (s *WebServer) projectUpdate(w http.ResponseWriter, r *http.Request) {
 	projectPath := s.getProjectPath(parent, name)
 
 	out := s.run(projectPath, "git", "pull")
+
+	w.Write([]byte(out))
+}
+
+func (s *WebServer) projectPull(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	out := s.run(projectPath, "docker-compose", "pull")
 
 	w.Write([]byte(out))
 }

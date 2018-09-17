@@ -13,6 +13,7 @@ import (
 func main() {
 
 	/* Getting parameters */
+	dev := flag.Bool("dev", false, "Dev mode : use the folder './gui/out/' as gui")
 	gitIntegration := flag.Bool("git", true, "Use this flag to activate git integration")
 	path := flag.String("path", "/media/docker", "Path to your compose tree")
 	flag.Parse()
@@ -26,6 +27,6 @@ func main() {
 	}
 
 	/* Webserver */
-	s := webserver.New(db, *path, *gitIntegration)
+	s := webserver.New(db, *path, *gitIntegration, *dev)
 	s.Run()
 }

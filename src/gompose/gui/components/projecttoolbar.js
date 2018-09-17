@@ -36,7 +36,10 @@ class ProjectToolbar extends React.Component {
     }
 
     backClick(e) {
-        if (this.props.isDetail){
+
+        if (this.props.isLog){
+            this.props.dispatch(setValue("logs", "none"));
+        } else if (this.props.isDetail){
             this.props.dispatch(setValue("projectDetail", "none"));
         } else {
             this.props.dispatch(setValue("projectParent", "none"));
