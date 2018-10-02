@@ -24,7 +24,7 @@ const log_container = {
     position: 'relative',
     padding: '10px',
     width: '90%',
-    left: 20
+    left: 20,
 }
 
 class Logs extends React.Component {

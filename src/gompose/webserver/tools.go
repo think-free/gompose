@@ -206,13 +206,11 @@ func (s *WebServer) getProject(db *storm.DB, parent, project string) Project {
 			if currentContainer.Compose != "" {
 				currentContainer.Volumes = containerVolumes
 				currentContainer.Ports = containerPorts
-				containerVolumes = containerVolumes[:0]
-				containerPorts = containerPorts[:0]
+				containerVolumes = make([]string, 0) // containerVolumes[:0]
+				containerPorts = make([]string, 0)   //containerPorts[:0]
 				containers = append(containers, currentContainer)
 			}
 			currentContainer = Container{Compose: key, Status: "stopped"}
-
-			// Get container status
 		}
 	}
 
@@ -253,9 +251,9 @@ func (s *WebServer) run(path, name string, args ...string) string {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = path
 	out, _ := cmd.Output()
-	/*if err != nil {
-		log.Println(err)
-	}*/
+	// if err != nil {
+	// 	log.Println(err)
+	// }
 
 	return string(out)
 }

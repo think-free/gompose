@@ -36,3 +36,11 @@
 [[constraint]]
   branch = "master"
   name = "github.com/GeertJohan/go.rice"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/fsouza/go-dockerclient"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/docker/libnetwork"

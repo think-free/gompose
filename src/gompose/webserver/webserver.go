@@ -2,10 +2,13 @@ package webserver
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	docker "github.com/fsouza/go-dockerclient"
 
 	rice "github.com/GeertJohan/go.rice"
 	"github.com/asdine/storm"
@@ -45,6 +48,13 @@ func New(db *storm.DB, path string, gitIntegration bool, dev bool) *WebServer {
 	http.HandleFunc("/projects", s.projects)
 
 	http.HandleFunc("/logs", s.logs)
+
+	http.HandleFunc("/containers", s.containersGet)
+
+	http.HandleFunc("/images", s.imagesGet)
+	http.HandleFunc("/images/removeintermediate", s.imagesRemoveIntermediate)
+
+	http.HandleFunc("/volumes", s.volumesGet)
 
 	http.HandleFunc("/project/get", s.projectGet)
 	http.HandleFunc("/project/update", s.projectUpdate)
@@ -171,6 +181,77 @@ func (s *WebServer) logs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte(out))
+}
+
+func (s *WebServer) containersGet(w http.ResponseWriter, r *http.Request) {
+
+	endpoint := "unix:///var/run/docker.sock"
+	client, err := docker.NewClient(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	imgs, err := client.ListContainers(docker.ListContainersOptions{All: true})
+	if err != nil {
+		log.Println(err)
+	}
+
+	js, _ := json.Marshal(&imgs)
+	w.Write(js)
+}
+
+func (s *WebServer) imagesGet(w http.ResponseWriter, r *http.Request) {
+
+	endpoint := "unix:///var/run/docker.sock"
+	client, err := docker.NewClient(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	imgs, err := client.ListImages(docker.ListImagesOptions{All: true})
+	if err != nil {
+		log.Println(err)
+	}
+
+	js, _ := json.Marshal(&imgs)
+	w.Write(js)
+}
+
+func (s *WebServer) imagesRemoveIntermediate(w http.ResponseWriter, r *http.Request) {
+
+	list := s.run("/", "docker", "images", "-a")
+	listArr := strings.Split(list, "\n")
+
+	ret := ""
+
+	for _, line := range listArr {
+
+		if strings.Contains(line, "none") {
+
+			image := strings.Fields(line)[2]
+			s.run("/", "docker", "rmi", image)
+			ret = ret + image + "\n"
+		}
+	}
+
+	w.Write([]byte(ret))
+}
+
+func (s *WebServer) volumesGet(w http.ResponseWriter, r *http.Request) {
+
+	endpoint := "unix:///var/run/docker.sock"
+	client, err := docker.NewClient(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	volumes, err := client.ListVolumes(docker.ListVolumesOptions{})
+	if err != nil {
+		log.Println(err)
+	}
+
+	js, _ := json.Marshal(&volumes)
+	w.Write(js)
 }
 
 func (s *WebServer) projectGet(w http.ResponseWriter, r *http.Request) {
