@@ -189,7 +189,7 @@ class ProjectDetail extends React.Component {
                     <Container style={action_container}>
                         <img src="static/assets/action.png" /><span style={containerTitle}>state</span>&nbsp;&nbsp;&nbsp;{detail.status}
                         <span style={floatRightArea}>
-                            <div style={button} onClick={this.updateClick}>Pull images</div>
+                            <div style={button} onClick={this.pullClick}>Pull images</div>
                             <div style={button} onClick={this.stopClick}>Stop</div>
                             <div style={button} onClick={this.startClick}>Start</div>
                         </span>
