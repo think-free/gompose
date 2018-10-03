@@ -42,6 +42,7 @@ Parameters :
 
 - -git : Use the git integration
 - -path : Specify an other path for your docker-compose files
+- -dev : Dev mode, load webpage from disk (./src/gompose/gui/out/) instead of embedded
 
 Usage :
 ---------------------
