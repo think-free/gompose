@@ -379,7 +379,7 @@ func (s *WebServer) projectPull(w http.ResponseWriter, r *http.Request) {
 	projectPath := s.getProjectPath(parent, name)
 
 	out := s.run(projectPath, "docker-compose", "pull")
-	out = out + "\n" + s.run(projectPath, "docker-compose", "pull")
+	out = out + "\n" + s.run(projectPath, "docker-compose", "up")
 
 	w.Write([]byte(out))
 }
