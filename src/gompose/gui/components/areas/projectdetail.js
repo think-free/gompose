@@ -189,7 +189,7 @@ class ProjectDetail extends React.Component {
                     <Container style={action_container}>
                         <img src="static/assets/action.png" /><span style={containerTitle}>state</span>&nbsp;&nbsp;&nbsp;{detail.status}
                         <span style={floatRightArea}>
-                            <div style={button} onClick={this.updateClick}>Pull</div>
+                            <div style={button} onClick={this.updateClick}>Pull images</div>
                             <div style={button} onClick={this.stopClick}>Stop</div>
                             <div style={button} onClick={this.startClick}>Start</div>
                         </span>
@@ -309,6 +309,7 @@ class ProjectContainerDetail extends React.Component {
         this.logClick=this.logClick.bind(this);
         this.startClick=this.startClick.bind(this);
         this.stopClick=this.stopClick.bind(this);
+        this.deleteClick=this.deleteClick.bind(this);
     }
 
     logClick(e) {
@@ -326,10 +327,17 @@ class ProjectContainerDetail extends React.Component {
         fetch("/project/container/stop?parent=" + this.props.parent + "&name=" + this.props.project + "&container=" + this.props.container.compose)
     }
 
+    deleteClick(e) {
+        console.log("Delete container " + this.props.parent + " / " + this.props.project + " -> " + this.props.container.compose)
+        fetch("/project/container/delete?parent=" + this.props.parent + "&name=" + this.props.project + "&container=" + this.props.container.compose)
+    }
+
     render() {
         return  (
 
-            <div style={{...subcontainer,...containerDetail}}><div style={orange}>{this.props.container.compose}<span style={floatRightArea}> <div style={button} onClick={this.logClick}>Log</div> <div style={button} onClick={this.stopClick}>Stop</div> <div style={button} onClick={this.startClick}>Start</div></span></div><br />
+            <div style={{...subcontainer,...containerDetail}}>
+                <div style={orange}>{this.props.container.compose}<span style={floatRightArea}> <div style={button} onClick={this.logClick}>Log</div> <div style={button} onClick={this.stopClick}>Stop</div> <div style={button} onClick={this.startClick}>Start</div></span></div><br />
+                <span style={floatRightArea}> <div style={button} onClick={this.deleteClick}>Delete</div> </span>
                 <table>
                     <tr>
                         <td>State</td>

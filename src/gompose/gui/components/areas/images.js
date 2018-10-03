@@ -2,6 +2,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import Container from '../container.js'
 import { setValue } from '../store.js'
+import UploadForm from '../fileuploader.js'
 
 const layoutStyle = {
     display: 'block',
@@ -17,6 +18,12 @@ const orange = {
 const floatRightArea = {
     float: 'right',
     marginRight: 5
+}
+
+const floatTopRightArea = {
+    position: 'absolute',
+    top: '15px',
+    right: '20px'
 }
 
 const button = {
@@ -38,12 +45,6 @@ const generic_container = {
     width: '90%',
     left: 20,
     padding: '15px'
-}
-
-const mapStateToProps = (state) => {
-    return {
-        Images: state.Images
-    }
 }
 
 const footer = {
@@ -71,12 +72,15 @@ const button_toolbar = {
     padding: '10px',
     color: "#E65D1E",
     fontVariant: 'small-caps',
-    textTransform: 'uppercase'
+    textTransform: 'uppercase',
+    userSelect:'none'
 }
 
 const mapStateToProps = (state) => {
+
     return {
-        hideIntermediateImages: state.hideIntermediateImages
+        hideUntaggedImages: state.hideUntaggedImages,
+        ImageUpload: state.ImageUpload
     }
 }
 
@@ -88,11 +92,15 @@ class Images extends React.Component {
             images: [],
         };
 
+        this.props.hideUntaggedImages = true;
+        this.props.ImageUpload = false;
+
         this.removeUntagged=this.removeUntaggedClick.bind(this);
-        this.hideShowIntermediateClick=this.hideShowIntermediateClick.bind(this);
+        this.hideShowUntaggedClick=this.hideShowUntaggedClick.bind(this);
+        this.showUploadImageForm=this.showUploadImageForm.bind(this);
     }
 
-    async componentDidMount() {
+    componentDidMount() {
 
         this.getData();
 
@@ -100,6 +108,10 @@ class Images extends React.Component {
         this.interval = setInterval(() => {
             this.getData();
         }, 2000);
+    }
+
+    componentWillUnmount() {
+        clearInterval(this.interval);
     }
 
     async getData(url){
@@ -114,58 +126,111 @@ class Images extends React.Component {
         fetch("/images/removeintermediate")
     }
 
-    hideShowIntermediateClick(e) {
+    hideShowUntaggedClick(e) {
 
-        this.props.dispatch(setValue("hideIntermediateImages", !this.props.hideIntermediateImages));
+        this.props.dispatch(setValue("hideUntaggedImages", !this.props.hideUntaggedImages));
+    }
+
+    showUploadImageForm(e) {
+
+        this.props.dispatch(setValue("ImageUpload", !this.props.ImageUpload));
     }
 
     render() {
-        const { images } = this.state;
+
+        var upload = this.props.ImageUpload;
+
+        if (upload) {
+
+            return (
+                <div style={layoutStyle}>
+                    <Container style={container_toolbar}> <span style={button_toolbar} onClick={this.showUploadImageForm}>Back</span></Container>
+                    <Container style={generic_container}>
+                        <div style={orange}>Upload image</div>
+                        <br />
+                        <UploadForm url="/images/upload"done={this.showUploadImageForm}/>
+                    </Container>
+                </div>
+            )
+
+        } else {
+
+            const { images } = this.state;
+
+            var hide = this.props.hideUntaggedImages;
+
+            return (
+                <div style={layoutStyle}>
+                    <Container style={container_toolbar}> <span style={button_toolbar} onClick={this.hideShowUntaggedClick}>{hide ? "Show" : "Hide"} untagged</span>|<span style={button_toolbar} onClick={this.showUploadImageForm}>Upload</span></Container>
+
+                    {images.map(function(image){
+
+                        if (hide && image.RepoTags[0] === "<none>:<none>")
+                            return (null);
+
+                        else {
+                            return (
+                                <ImageDetail image={image}/>
+                            )
+                        }
+                    })}
+
+                    <div style={footer}></div>
+                </div>
+            );
+        }
+    }
+}
+
+class ImageDetail extends React.Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+        };
+
+        this.deleteClick=this.deleteClick.bind(this);
+    }
+
+    deleteClick(e) {
+        console.log("Deleting image " + this.props.image.Id)
+        fetch("/images/delete?id=" + this.props.image.Id )
+    }
+
+    render() {
+        var date = new Date(this.props.image.Created * 1000)
+        var created = date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear() + " @ " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds()
 
         return (
-            <div style={layoutStyle}>
-                <Container style={container_toolbar}> <span style={button_toolbar} onClick={this.hideShowIntermediateClick}>{this.props.hideIntermediateImages ? "Hide" : "Show"} intermediate</span> <span style={button_toolbar} onClick={this.removeUntaggedClick}>Clean intermediate</span>|<span style={button_toolbar}>Upload</span></Container>
-
-                {images.map(function(image){
-
-                    if (this.props.hideIntermediateImages && image.RepoTags[0] === "<none>:<none>")
-                        return ()
-
-                    var date = new Date(image.Created * 1000)
-                    var created = date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear() + " @ " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds()
-
-                    return (
+            <div>
+                <Container style={generic_container}>
                         <div>
-                            <Container style={generic_container}>
-                                    {image.RepoTags.map(function(tag){
-                                        return (
-                                            <div><div style={orange}>{tag}</div><br /></div>
-                                        )
-                                    })}
-                                    <table>
-                                        <tr>
-                                            <td>Id</td>
-                                            <td>:</td>
-                                            <td>{image.Id.slice(7, 19)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Created</td>
-                                            <td>:</td>
-                                            <td>{created}</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Size</td>
-                                            <td>:</td>
-                                            <td>{Math.round(image.Size / 1000000)} MB</td>
-                                        </tr>
-                                    </table>
-                            </Container>
-                            <br />
+                            {this.props.image.RepoTags.map(function(tag){
+                                return (
+                                    <div style={orange}>{tag}</div>
+                                )
+                            })}
+                            <span style={floatTopRightArea}> <div style={button} onClick={this.deleteClick}>Delete</div> </span><br />
                         </div>
-                    )
-                })}
-
-                <div style={footer}></div>
+                        <table>
+                            <tr>
+                                <td>Id</td>
+                                <td>:</td>
+                                <td>{this.props.image.Id.slice(7, 19)}</td>
+                            </tr>
+                            <tr>
+                                <td>Created</td>
+                                <td>:</td>
+                                <td>{created}</td>
+                            </tr>
+                            <tr>
+                                <td>Size</td>
+                                <td>:</td>
+                                <td>{Math.round(this.props.image.Size / 1000000)} MB</td>
+                            </tr>
+                        </table>
+                </Container>
+                <br />
             </div>
         );
     }

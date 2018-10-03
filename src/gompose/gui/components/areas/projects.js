@@ -92,6 +92,7 @@ class Projects extends React.Component {
             return (
                 <div style={layoutStyle}>
                     <ToolBar addBt={!this.state.git && this.state.create} updateBt={this.state.git} backBt={this.props.projectParent != "none"} parent={this.props.projectParent} project="none" isDetail={false} />
+                    <br /><br />
                     {boards.map(function(board){
                         return (
                             <ProjectsItem key={board.ID} name={board.name} image={board.logo} parent={board.parent} state={board.state}/>
@@ -125,7 +126,8 @@ const cellStyle = {
     display: 'block',
     float: 'left',
     height: '200px',
-    width: '200px'
+    width: '200px',
+    userSelect:'none'
 }
 
 const cellContent = {

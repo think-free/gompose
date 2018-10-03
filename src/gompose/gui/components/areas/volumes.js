@@ -72,6 +72,10 @@ class Volumes extends React.Component {
         }, 2000);
     }
 
+    componentWillUnmount() {
+        clearInterval(this.interval);
+    }
+
     async getData(url){
         var url = "/volumes"
 

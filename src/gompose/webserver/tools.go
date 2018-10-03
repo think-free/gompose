@@ -250,7 +250,7 @@ func (s *WebServer) run(path, name string, args ...string) string {
 
 	cmd := exec.Command(name, args...)
 	cmd.Dir = path
-	out, _ := cmd.Output()
+	out, _ := cmd.CombinedOutput()
 	// if err != nil {
 	// 	log.Println(err)
 	// }

@@ -72,6 +72,10 @@ class Containers extends React.Component {
         }, 2000);
     }
 
+    componentWillUnmount() {
+        clearInterval(this.interval);
+    }
+
     async getData(url){
         var url = "/containers"
 
@@ -87,34 +91,58 @@ class Containers extends React.Component {
             <div style={layoutStyle}>
                 {containers.map(function(container){
                     return (
-                        <div>
-                            <Container style={generic_container}>
-                                <div><div style={orange}>{container.Names[0] != undefined ? container.Names[0].substring(1) : container.Id}</div><br />
-                                    <table>
-                                        <tr>
-                                            <td>State</td>
-                                            <td>:</td>
-                                            <td>{container.Status} ({container.State})</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Command</td>
-                                            <td>:</td>
-                                            <td>{container.Command}</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Image</td>
-                                            <td>:</td>
-                                            <td>{container.Image}</td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            </Container>
-                            <br />
-                        </div>
+                        <ContainerDetail container={container}/>
                     )
                 })}
 
                 <div style={footer}></div>
+            </div>
+        );
+    }
+}
+
+
+class ContainerDetail extends React.Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+        };
+
+        this.deleteClick=this.deleteClick.bind(this);
+    }
+
+    deleteClick(e) {
+        console.log("Deleting container " + this.props.container.Id)
+        fetch("/containers/delete?id=" + this.props.container.Id )
+    }
+
+    render() {
+        return (
+            <div>
+                <Container style={generic_container}>
+                    <div><div style={orange}>{this.props.container.Names[0] != undefined ? this.props.container.Names[0].substring(1) : this.props.container.Id} <span style={floatRightArea}> <div style={button} onClick={this.deleteClick}>Delete</div> </span></div><br />
+
+                        <table>
+                            <tr>
+                                <td>State</td>
+                                <td>:</td>
+                                <td>{this.props.container.Status} ({this.props.container.State})</td>
+                            </tr>
+                            <tr>
+                                <td>Command</td>
+                                <td>:</td>
+                                <td>{this.props.container.Command}</td>
+                            </tr>
+                            <tr>
+                                <td>Image</td>
+                                <td>:</td>
+                                <td>{this.props.container.Image}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </Container>
+                <br />
             </div>
         );
     }

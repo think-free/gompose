@@ -2,6 +2,8 @@ package webserver
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -50,9 +52,12 @@ func New(db *storm.DB, path string, gitIntegration bool, dev bool) *WebServer {
 	http.HandleFunc("/logs", s.logs)
 
 	http.HandleFunc("/containers", s.containersGet)
+	http.HandleFunc("/containers/delete", s.containersDelete)
 
 	http.HandleFunc("/images", s.imagesGet)
 	http.HandleFunc("/images/removeintermediate", s.imagesRemoveIntermediate)
+	http.HandleFunc("/images/upload", s.imagesUpload)
+	http.HandleFunc("/images/delete", s.imagesDelete)
 
 	http.HandleFunc("/volumes", s.volumesGet)
 
@@ -63,6 +68,7 @@ func New(db *storm.DB, path string, gitIntegration bool, dev bool) *WebServer {
 	http.HandleFunc("/project/stop/", s.projectStop)
 	http.HandleFunc("/project/container/start", s.projectContainerStart)
 	http.HandleFunc("/project/container/stop", s.projectContainerStop)
+	http.HandleFunc("/project/container/delete", s.projectContainerDelete)
 
 	return s
 }
@@ -200,6 +206,32 @@ func (s *WebServer) containersGet(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
+func (s *WebServer) containersDelete(w http.ResponseWriter, r *http.Request) {
+
+	idstring, ok := r.URL.Query()["id"]
+	id := strings.Join(idstring, " ")
+
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	endpoint := "unix:///var/run/docker.sock"
+	client, err := docker.NewClient(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	client.StopContainer(id, 30000)
+
+	err = client.RemoveContainer(docker.RemoveContainerOptions{
+		ID: id,
+	})
+
+	js, _ := json.Marshal(&err)
+	w.Write(js)
+}
+
 func (s *WebServer) imagesGet(w http.ResponseWriter, r *http.Request) {
 
 	endpoint := "unix:///var/run/docker.sock"
@@ -235,6 +267,64 @@ func (s *WebServer) imagesRemoveIntermediate(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.Write([]byte(ret))
+}
+
+func (s *WebServer) imagesUpload(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	file, handle, err := r.FormFile("file")
+	if err != nil {
+		fmt.Fprintf(w, "%v", err)
+		return
+	}
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		fmt.Fprintf(w, "%v", err)
+		return
+	}
+
+	fileName := strings.TrimPrefix(handle.Filename, "'")
+	fileName = strings.TrimSuffix(fileName, "'")
+
+	err = ioutil.WriteFile("/tmp/"+fileName, data, 0666)
+	if err != nil {
+		fmt.Fprintf(w, "%v", err)
+		return
+	}
+
+	out := s.run("/tmp/", "docker", "load", "--input", fileName)
+
+	os.Remove("/tmp/" + fileName)
+
+	fmt.Fprint(w, out)
+}
+
+func (s *WebServer) imagesDelete(w http.ResponseWriter, r *http.Request) {
+
+	idstring, ok := r.URL.Query()["id"]
+	id := strings.Join(idstring, " ")
+
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	endpoint := "unix:///var/run/docker.sock"
+	client, err := docker.NewClient(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	err = client.RemoveImage(id)
+
+	js, _ := json.Marshal(&err)
+	w.Write(js)
 }
 
 func (s *WebServer) volumesGet(w http.ResponseWriter, r *http.Request) {
@@ -359,6 +449,28 @@ func (s *WebServer) projectContainerStop(w http.ResponseWriter, r *http.Request)
 	container := strings.Join(containerar, " ")
 
 	out := s.run(projectPath, "docker-compose", "stop", container)
+
+	w.Write([]byte(out))
+}
+
+func (s *WebServer) projectContainerDelete(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	containerar, ok := r.URL.Query()["container"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	container := strings.Join(containerar, " ")
+
+	out := s.run(projectPath, "docker-compose", "stop", container)
+	out = out + "\n" + s.run(projectPath, "docker-compose", "rm", container)
 
 	w.Write([]byte(out))
 }
