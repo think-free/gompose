@@ -165,6 +165,9 @@ class Images extends React.Component {
 
                     {images.map(function(image){
 
+                        if (image.RepoTags === undefined)
+                            return (null);
+
                         if (hide && image.RepoTags[0] === "<none>:<none>")
                             return (null);
 

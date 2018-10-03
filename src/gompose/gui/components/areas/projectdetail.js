@@ -129,6 +129,7 @@ class ProjectDetail extends React.Component {
         this.getData=this.getData.bind(this);
         this.stopClick=this.stopClick.bind(this);
         this.startClick=this.startClick.bind(this);
+        this.pullClick=this.pullClick.bind(this);
     }
 
     async componentDidMount() {
