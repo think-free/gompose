@@ -76,6 +76,7 @@ class ElementList extends React.Component {
                             color: #FFF;
                             font-size: 1.2em;
                             user-select:none;
+                            cursor: pointer;
                         }
 
                         li:hover {

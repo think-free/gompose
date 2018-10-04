@@ -2,7 +2,6 @@ package webserver
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -43,32 +42,31 @@ func New(db *storm.DB, path string, gitIntegration bool, dev bool) *WebServer {
 	http.Handle("/files/", http.StripPrefix("/files", http.FileServer(http.Dir(s.path))))
 
 	// Api requests
-	http.HandleFunc("/dashboard", s.dashboard)
-	http.HandleFunc("/dashboard/add", s.dashboardAdd)
-	http.HandleFunc("/dashboard/del", s.dashboardDel)
+	http.HandleFunc("/dashboard", s.Dashboard)
+	http.HandleFunc("/dashboard/add", s.DashboardAdd)
+	http.HandleFunc("/dashboard/del", s.DashboardDel)
 
-	http.HandleFunc("/projects", s.projects)
+	http.HandleFunc("/projects", s.Projects)
+	http.HandleFunc("/project/get", s.ProjectGet)
+	http.HandleFunc("/project/update", s.ProjectUpdate)
+	http.HandleFunc("/project/pull", s.ProjectPull)
+	http.HandleFunc("/project/start", s.ProjectStart)
+	http.HandleFunc("/project/stop/", s.ProjectStop)
+	http.HandleFunc("/project/container/start", s.ProjectContainerStart)
+	http.HandleFunc("/project/container/stop", s.ProjectContainerStop)
+	http.HandleFunc("/project/container/delete", s.ProjectContainerDelete)
 
-	http.HandleFunc("/logs", s.logs)
+	http.HandleFunc("/logs", s.Logs)
 
-	http.HandleFunc("/containers", s.containersGet)
-	http.HandleFunc("/containers/delete", s.containersDelete)
+	http.HandleFunc("/containers", s.ContainersGet)
+	http.HandleFunc("/containers/delete", s.ContainersDelete)
 
-	http.HandleFunc("/images", s.imagesGet)
-	http.HandleFunc("/images/removeintermediate", s.imagesRemoveIntermediate)
-	http.HandleFunc("/images/upload", s.imagesUpload)
-	http.HandleFunc("/images/delete", s.imagesDelete)
+	http.HandleFunc("/images", s.ImagesGet)
+	http.HandleFunc("/images/removeintermediate", s.ImagesRemoveIntermediate)
+	http.HandleFunc("/images/upload", s.ImagesUpload)
+	http.HandleFunc("/images/delete", s.ImagesDelete)
 
-	http.HandleFunc("/volumes", s.volumesGet)
-
-	http.HandleFunc("/project/get", s.projectGet)
-	http.HandleFunc("/project/update", s.projectUpdate)
-	http.HandleFunc("/project/pull", s.projectPull)
-	http.HandleFunc("/project/start", s.projectStart)
-	http.HandleFunc("/project/stop/", s.projectStop)
-	http.HandleFunc("/project/container/start", s.projectContainerStart)
-	http.HandleFunc("/project/container/stop", s.projectContainerStop)
-	http.HandleFunc("/project/container/delete", s.projectContainerDelete)
+	http.HandleFunc("/volumes", s.VolumesGet)
 
 	return s
 }
@@ -81,7 +79,11 @@ func (s *WebServer) Run() {
 
 /* Handlers */
 
-func (s *WebServer) dashboard(w http.ResponseWriter, r *http.Request) {
+// Dashboard
+
+// Return all the dashboard configured
+// Params : none
+func (s *WebServer) Dashboard(w http.ResponseWriter, r *http.Request) {
 
 	var dash []Dashboard
 	s.db.All(&dash)
@@ -89,62 +91,80 @@ func (s *WebServer) dashboard(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func (s *WebServer) dashboardAdd(w http.ResponseWriter, r *http.Request) {
+// Add a dashboard (POST request)
+// Params : body is the json formated dashboard
+func (s *WebServer) DashboardAdd(w http.ResponseWriter, r *http.Request) {
 
 	var dash Dashboard
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&dash)
 
 	if err != nil {
-
-		w.Write([]byte("{\"msg\":" + err.Error() + "}"))
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
 	} else {
 
 		dash.Internal = dash.Parent + dash.Project + dash.Port
 		err := s.db.Save(&dash)
 		if err != nil {
-
-			w.Write([]byte("{\"msg\":" + err.Error() + "}"))
+			log.Println(err)
+			w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
 		} else {
 
 			js, _ := json.Marshal(dash)
+			log.Println(js)
+
+			js = append([]byte("{\"type\" : \"json\", \"msg\":"), js...)
+			js = append(js, []byte("}")...)
 			w.Write(js)
 		}
 	}
 }
 
-func (s *WebServer) dashboardDel(w http.ResponseWriter, r *http.Request) {
+func (s *WebServer) DashboardDel(w http.ResponseWriter, r *http.Request) {
 
 	idstring, ok := r.URL.Query()["id"]
 
 	if !ok {
+		log.Println("Missing url parameter")
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\": \"Missing url parameter 'id'\"}"))
 		return
 	}
 
 	id, err := strconv.Atoi(strings.Join(idstring, " "))
 	if err != nil {
+		log.Println("Bad format for url parameter")
 		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\": \"Bad format for url parameter 'id'\"}"))
 		return
 	}
 
 	var dash Dashboard
 	err = s.db.One("ID", id, &dash)
 	if err != nil {
+		log.Println("Can't find dashboard for deletion")
 		w.WriteHeader(http.StatusNoContent)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\": \"Can't find dashboard for deletion\"}"))
 		return
 	}
 
 	err = s.db.DeleteStruct(&dash)
 	if err != nil {
+		log.Println("Error deleting dashboard")
 		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\": \"Error deleting dashboard\"}"))
 		return
 	}
 
-	w.Write([]byte("OK"))
+	w.Write([]byte("{\"type\" : \"log\", \"msg\": \"Dashboard deleted\"}"))
 }
 
-func (s *WebServer) projects(w http.ResponseWriter, r *http.Request) {
+// Projects
+
+// Return all the projects
+// Params : parent, leave empty to load projects from root projects directory
+func (s *WebServer) Projects(w http.ResponseWriter, r *http.Request) {
 
 	parentar, _ := r.URL.Query()["parent"]
 	parent := "/" + strings.Join(parentar, " ")
@@ -163,7 +183,205 @@ func (s *WebServer) projects(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func (s *WebServer) logs(w http.ResponseWriter, r *http.Request) {
+// Return the project detail
+// Params :
+// - parent
+// - name
+func (s *WebServer) ProjectGet(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	js, _ := json.Marshal(s.getProject(s.db, parent, name))
+	w.Write(js)
+}
+
+// Run git pull for the specified project
+// Params :
+// - parent
+// - name
+func (s *WebServer) ProjectUpdate(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+		return
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	out := s.run(projectPath, "git", "pull")
+
+	w.Write([]byte("{\"type\" : \"log\", \"msg\":\"" + out + "\"}"))
+}
+
+// Run docker-compose pull and docker-compose up for the specified project
+// Params :
+// - parent
+// - name
+func (s *WebServer) ProjectPull(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+		return
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	out := s.run(projectPath, "docker-compose", "pull")
+	out = out + "\n" + s.run(projectPath, "docker-compose", "up")
+
+	w.Write([]byte("{\"type\" : \"log\", \"msg\":\"" + out + "\"}"))
+}
+
+// Run docker-compose up for the specified project
+// Params :
+// - parent
+// - name
+func (s *WebServer) ProjectStart(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+		return
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	out := s.run(projectPath, "docker-compose", "up")
+
+	w.Write([]byte("{\"type\" : \"log\", \"msg\":\"" + out + "\"}"))
+}
+
+// Run docker-compose stop for the specified project
+// Params : none
+func (s *WebServer) ProjectStop(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+		return
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	out := s.run(projectPath, "docker-compose", "stop")
+
+	w.Write([]byte("{\"type\" : \"log\", \"msg\":\"" + out + "\"}"))
+}
+
+// Run docker-compose up for the specified container in the specified project
+// Params :
+// - parent
+// - name
+// - container
+func (s *WebServer) ProjectContainerStart(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+		return
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	containerar, ok := r.URL.Query()["container"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println("Missing url parameter")
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":\"Missing url parameter 'container'\"}"))
+		return
+	}
+	container := strings.Join(containerar, " ")
+
+	out := s.run(projectPath, "docker-compose", "up", container)
+
+	w.Write([]byte("{\"type\" : \"log\", \"msg\":\"" + out + "\"}"))
+}
+
+// Run docker-compose stop for the specified container in the specified project
+// Params :
+// - parent
+// - name
+// - container
+func (s *WebServer) ProjectContainerStop(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+		return
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	containerar, ok := r.URL.Query()["container"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println("Missing url parameter")
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":\"Missing url parameter 'container'\"}"))
+		return
+	}
+	container := strings.Join(containerar, " ")
+
+	out := s.run(projectPath, "docker-compose", "stop", container)
+
+	w.Write([]byte("{\"type\" : \"log\", \"msg\":\"" + out + "\"}"))
+}
+
+// Run docker-compose stop and docker-compose rm for the specified container in the specified project
+// Params :
+// - parent
+// - name
+// - container
+func (s *WebServer) ProjectContainerDelete(w http.ResponseWriter, r *http.Request) {
+
+	parent, name, err := s.getParentAndNameFromRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+	}
+
+	projectPath := s.getProjectPath(parent, name)
+
+	containerar, ok := r.URL.Query()["container"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println("Missing url parameter")
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":\"Missing url parameter 'container'\"}"))
+		return
+	}
+	container := strings.Join(containerar, " ")
+
+	out := s.run(projectPath, "docker-compose", "stop", container)
+	out = out + "\n" + s.run(projectPath, "docker-compose", "rm", container)
+
+	w.Write([]byte("{\"type\" : \"log\", \"msg\":\"" + out + "\"}"))
+}
+
+// Logs
+
+// Run docker-compose logs for the specified container in the specified project
+// Params :
+// - parent
+// - name
+// - container if container == "none" return logs for the entire project
+func (s *WebServer) Logs(w http.ResponseWriter, r *http.Request) {
 
 	parent, name, err := s.getParentAndNameFromRequest(r)
 	if err != nil {
@@ -189,7 +407,11 @@ func (s *WebServer) logs(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(out))
 }
 
-func (s *WebServer) containersGet(w http.ResponseWriter, r *http.Request) {
+// Containers
+
+// List all docker containers
+// Params : none
+func (s *WebServer) ContainersGet(w http.ResponseWriter, r *http.Request) {
 
 	endpoint := "unix:///var/run/docker.sock"
 	client, err := docker.NewClient(endpoint)
@@ -206,7 +428,10 @@ func (s *WebServer) containersGet(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func (s *WebServer) containersDelete(w http.ResponseWriter, r *http.Request) {
+// Delete the container with the specified id
+// Params :
+// - id
+func (s *WebServer) ContainersDelete(w http.ResponseWriter, r *http.Request) {
 
 	idstring, ok := r.URL.Query()["id"]
 	id := strings.Join(idstring, " ")
@@ -228,11 +453,20 @@ func (s *WebServer) containersDelete(w http.ResponseWriter, r *http.Request) {
 		ID: id,
 	})
 
-	js, _ := json.Marshal(&err)
-	w.Write(js)
+	if err != nil {
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+	} else {
+
+		w.Write([]byte("{\"type\" : \"log\", \"msg\": \"Container deleted\"}"))
+	}
 }
 
-func (s *WebServer) imagesGet(w http.ResponseWriter, r *http.Request) {
+// Images
+
+// List all docker images
+// Params : none
+func (s *WebServer) ImagesGet(w http.ResponseWriter, r *http.Request) {
 
 	endpoint := "unix:///var/run/docker.sock"
 	client, err := docker.NewClient(endpoint)
@@ -249,7 +483,9 @@ func (s *WebServer) imagesGet(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func (s *WebServer) imagesRemoveIntermediate(w http.ResponseWriter, r *http.Request) {
+// Remove all untagged images that are not in use
+// Params : none
+func (s *WebServer) ImagesRemoveIntermediate(w http.ResponseWriter, r *http.Request) {
 
 	list := s.run("/", "docker", "images", "-a")
 	listArr := strings.Split(list, "\n")
@@ -265,27 +501,31 @@ func (s *WebServer) imagesRemoveIntermediate(w http.ResponseWriter, r *http.Requ
 			ret = ret + image + "\n"
 		}
 	}
-
-	w.Write([]byte(ret))
+	w.Write([]byte("{\"type\" : \"log\", \"msg\": \"" + ret + "\"}"))
 }
 
-func (s *WebServer) imagesUpload(w http.ResponseWriter, r *http.Request) {
+// Upload and docker load a compressed image
+// Params :
+// - file (POST request multipart/form)
+func (s *WebServer) ImagesUpload(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\": \"Bad methods\"}"))
 		return
 	}
 
 	file, handle, err := r.FormFile("file")
 	if err != nil {
-		fmt.Fprintf(w, "%v", err)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
 		return
 	}
 	defer file.Close()
 
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		fmt.Fprintf(w, "%v", err)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
 		return
 	}
 
@@ -294,24 +534,29 @@ func (s *WebServer) imagesUpload(w http.ResponseWriter, r *http.Request) {
 
 	err = ioutil.WriteFile("/tmp/"+fileName, data, 0666)
 	if err != nil {
-		fmt.Fprintf(w, "%v", err)
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
 		return
 	}
 
 	out := s.run("/tmp/", "docker", "load", "--input", fileName)
-
 	os.Remove("/tmp/" + fileName)
 
-	fmt.Fprint(w, out)
+	w.Write([]byte("{\"type\" : \"log\", \"msg\":\"" + out + "\"}"))
 }
 
-func (s *WebServer) imagesDelete(w http.ResponseWriter, r *http.Request) {
+// Delete the specified image if not in use
+// Params :
+// - id
+func (s *WebServer) ImagesDelete(w http.ResponseWriter, r *http.Request) {
 
 	idstring, ok := r.URL.Query()["id"]
 	id := strings.Join(idstring, " ")
 
 	if !ok {
+		log.Println("Missing url parameter")
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\": \"Missing url parameter 'id'\"}"))
 		return
 	}
 
@@ -323,11 +568,20 @@ func (s *WebServer) imagesDelete(w http.ResponseWriter, r *http.Request) {
 
 	err = client.RemoveImage(id)
 
-	js, _ := json.Marshal(&err)
-	w.Write(js)
+	if err != nil {
+		log.Println(err)
+		w.Write([]byte("{\"type\" : \"error\", \"msg\":" + err.Error() + "}"))
+	} else {
+
+		w.Write([]byte("{\"type\" : \"log\", \"msg\": \"Image deleted\"}"))
+	}
 }
 
-func (s *WebServer) volumesGet(w http.ResponseWriter, r *http.Request) {
+// Volumes
+
+// List all docker volumes
+// Params : none
+func (s *WebServer) VolumesGet(w http.ResponseWriter, r *http.Request) {
 
 	endpoint := "unix:///var/run/docker.sock"
 	client, err := docker.NewClient(endpoint)
@@ -342,136 +596,4 @@ func (s *WebServer) volumesGet(w http.ResponseWriter, r *http.Request) {
 
 	js, _ := json.Marshal(&volumes)
 	w.Write(js)
-}
-
-func (s *WebServer) projectGet(w http.ResponseWriter, r *http.Request) {
-
-	parent, name, err := s.getParentAndNameFromRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	js, _ := json.Marshal(s.getProject(s.db, parent, name))
-	w.Write(js)
-}
-
-func (s *WebServer) projectUpdate(w http.ResponseWriter, r *http.Request) {
-
-	parent, name, err := s.getParentAndNameFromRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	projectPath := s.getProjectPath(parent, name)
-
-	out := s.run(projectPath, "git", "pull")
-
-	w.Write([]byte(out))
-}
-
-func (s *WebServer) projectPull(w http.ResponseWriter, r *http.Request) {
-
-	parent, name, err := s.getParentAndNameFromRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	projectPath := s.getProjectPath(parent, name)
-
-	out := s.run(projectPath, "docker-compose", "pull")
-	out = out + "\n" + s.run(projectPath, "docker-compose", "up")
-
-	w.Write([]byte(out))
-}
-
-func (s *WebServer) projectStart(w http.ResponseWriter, r *http.Request) {
-
-	parent, name, err := s.getParentAndNameFromRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	projectPath := s.getProjectPath(parent, name)
-
-	out := s.run(projectPath, "docker-compose", "up")
-
-	w.Write([]byte(out))
-}
-
-func (s *WebServer) projectStop(w http.ResponseWriter, r *http.Request) {
-
-	parent, name, err := s.getParentAndNameFromRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	projectPath := s.getProjectPath(parent, name)
-
-	out := s.run(projectPath, "docker-compose", "stop")
-
-	w.Write([]byte(out))
-}
-
-func (s *WebServer) projectContainerStart(w http.ResponseWriter, r *http.Request) {
-
-	parent, name, err := s.getParentAndNameFromRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	projectPath := s.getProjectPath(parent, name)
-
-	containerar, ok := r.URL.Query()["container"]
-	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	container := strings.Join(containerar, " ")
-
-	out := s.run(projectPath, "docker-compose", "up", container)
-
-	w.Write([]byte(out))
-}
-
-func (s *WebServer) projectContainerStop(w http.ResponseWriter, r *http.Request) {
-
-	parent, name, err := s.getParentAndNameFromRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	projectPath := s.getProjectPath(parent, name)
-
-	containerar, ok := r.URL.Query()["container"]
-	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	container := strings.Join(containerar, " ")
-
-	out := s.run(projectPath, "docker-compose", "stop", container)
-
-	w.Write([]byte(out))
-}
-
-func (s *WebServer) projectContainerDelete(w http.ResponseWriter, r *http.Request) {
-
-	parent, name, err := s.getParentAndNameFromRequest(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	projectPath := s.getProjectPath(parent, name)
-
-	containerar, ok := r.URL.Query()["container"]
-	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	container := strings.Join(containerar, " ")
-
-	out := s.run(projectPath, "docker-compose", "stop", container)
-	out = out + "\n" + s.run(projectPath, "docker-compose", "rm", container)
-
-	w.Write([]byte(out))
 }
