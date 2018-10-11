@@ -6,7 +6,7 @@ const style = {
 
 const Header = () => (
     <div style={style}>
-        <img src="static/assets/gompose-full.png" alt="Logo" width="200" />
+        <img src="static/assets/gompose-full.png" alt="Logo" width="200" draggable="false"/>
     </div>
 )
 
