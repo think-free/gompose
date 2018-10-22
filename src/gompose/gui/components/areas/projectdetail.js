@@ -180,7 +180,7 @@ class ProjectDetail extends React.Component {
         const parent = this.props.parent
         const project = this.props.project
 
-        if (detail.ports != undefined){
+        if (detail.ports != undefined && detail.ports != null){
 
             return (
                 <div>
