@@ -344,6 +344,9 @@ class ProjectContainerDetail extends React.Component {
         this.startClick=this.startClick.bind(this);
         this.stopClick=this.stopClick.bind(this);
         this.deleteClick=this.deleteClick.bind(this);
+
+        this.renderVolumes=this.renderVolumes.bind(this);
+        this.renderPorts=this.renderPorts.bind(this);
     }
 
     logClick(e) {
@@ -392,7 +395,7 @@ class ProjectContainerDetail extends React.Component {
                         <td>Volumes</td>
                         <td>:</td>
                     </tr>
-                    {this.props.container.volumes.map(function(volume){
+                    {this.props.container.volumes && this.props.container.volumes.map(function(volume){
                         return (
                             <tr>
                                 <td></td>
@@ -405,7 +408,7 @@ class ProjectContainerDetail extends React.Component {
                         <td>Ports</td>
                         <td>:</td>
                     </tr>
-                    {this.props.container.ports.map(function(port){
+                    {this.props.container.ports && this.props.container.ports.map(function(port){
                         return (
                             <tr>
                                 <td></td>
@@ -418,6 +421,14 @@ class ProjectContainerDetail extends React.Component {
                 </table>
             </div>
         )
+    }
+
+    renderVolumes() {
+
+    }
+
+    renderPorts() {
+
     }
 }
 
