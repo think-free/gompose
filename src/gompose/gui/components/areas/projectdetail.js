@@ -130,6 +130,9 @@ class ProjectDetail extends React.Component {
         this.stopClick=this.stopClick.bind(this);
         this.startClick=this.startClick.bind(this);
         this.pullClick=this.pullClick.bind(this);
+
+        this.renderPorts = this.renderPorts.bind(this);
+        this.renderContainers = this.renderContainers.bind(this);
     }
 
     async componentDidMount() {
@@ -195,23 +198,9 @@ class ProjectDetail extends React.Component {
                             <div style={button} onClick={this.startClick}>Start</div>
                         </span>
                     </Container>
-                    <Container style={generic_container}>
-                        <img src="static/assets/network.png" /><span style={containerTitle}>network</span><br /><br />
-                        {detail.ports.map(function(port){
-                            return (
-                                <ProjectPortDetail mapping={port} parent={parent} project={project}/>
-                            )
-                        })}
-                    </Container>
+                    {this.renderPorts()}
                     <br />
-                    <Container style={generic_container}>
-                        <img src="static/assets/container.png" /><span style={containerTitle}>containers</span><br /><br />
-                        {detail.containers.map(function(container){
-                            return (
-                                <ProjectContainerDetail container={container} parent={parent} project={project}/>
-                            )
-                        })}
-                    </Container>
+                    {this.renderContainers()}
                     <div style={footer}></div>
                 </div>
             )
@@ -219,6 +208,50 @@ class ProjectDetail extends React.Component {
 
             return (
                 <div> Loading ... </div>
+            )
+        }
+    }
+
+    renderPorts() {
+
+        const { detail } = this.state;
+
+        const parent = this.props.parent
+        const project = this.props.project
+
+        if (detail.ports != undefined && detail.ports != null){
+
+            return (
+                <Container style={generic_container}>
+                    <img src="static/assets/network.png" /><span style={containerTitle}>network</span><br /><br />
+                    {detail.ports.map(function(port){
+                        return (
+                            <ProjectPortDetail mapping={port} parent={parent} project={project}/>
+                        )
+                    })}
+                </Container>
+            )
+        }
+    }
+
+    renderContainers() {
+
+        const { detail } = this.state;
+
+        const parent = this.props.parent
+        const project = this.props.project
+
+        if (detail.containers != undefined && detail.containers != null){
+
+            return (
+                <Container style={generic_container}>
+                    <img src="static/assets/container.png" /><span style={containerTitle}>containers</span><br /><br />
+                    {detail.containers.map(function(container){
+                        return (
+                            <ProjectContainerDetail container={container} parent={parent} project={project}/>
+                        )
+                    })}
+                </Container>
             )
         }
     }
